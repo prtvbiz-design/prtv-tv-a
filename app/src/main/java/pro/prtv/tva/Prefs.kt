@@ -20,6 +20,12 @@ class Prefs(ctx: Context) {
         private const val K_SET = "code_set"
         private const val K_STREAM = "code_stream"
         private const val K_LAST_KIND = "last_kind"
+        private const val K_LANG = "lang"
+        private const val K_CACHE_ON = "cache_enabled"
+        private const val K_CACHE_KB = "cache_threshold_kb"
+        private const val K_SLEEP_ON = "sleep_enabled"
+        private const val K_WAKE_AT = "wake_at"
+        private const val K_SLEEP_AT = "sleep_at"
     }
     /** Создаётся один раз, лениво, при первом обращении. */
     val deviceId: String
@@ -45,6 +51,30 @@ class Prefs(ctx: Context) {
         get() = runCatching { Hosts.Kind.valueOf(sp.getString(K_LAST_KIND, "") ?: "") }
             .getOrDefault(Hosts.Kind.SLIDESHOW)
         set(v) = sp.edit().putString(K_LAST_KIND, v.name).apply()
+    /** "ru" или "en". Пустая строка — язык системы. */
+    var language: String
+        get() = sp.getString(K_LANG, "") ?: ""
+        set(v) = sp.edit().putString(K_LANG, v).apply()
+    /**
+     * Настройки кэша сохраняются уже сейчас, хотя сам кэш появится
+     * на следующем этапе: так значения переживут обновление и не
+     * придётся вводить их заново.
+     */
+    var cacheEnabled: Boolean
+        get() = sp.getBoolean(K_CACHE_ON, false)
+        set(v) = sp.edit().putBoolean(K_CACHE_ON, v).apply()
+    var cacheThresholdKb: Int
+        get() = sp.getInt(K_CACHE_KB, 0)
+        set(v) = sp.edit().putInt(K_CACHE_KB, v).apply()
+    var sleepEnabled: Boolean
+        get() = sp.getBoolean(K_SLEEP_ON, false)
+        set(v) = sp.edit().putBoolean(K_SLEEP_ON, v).apply()
+    var wakeAt: String
+        get() = sp.getString(K_WAKE_AT, "") ?: ""
+        set(v) = sp.edit().putString(K_WAKE_AT, v.trim()).apply()
+    var sleepAt: String
+        get() = sp.getString(K_SLEEP_AT, "") ?: ""
+        set(v) = sp.edit().putString(K_SLEEP_AT, v.trim()).apply()
     private fun keyFor(kind: Hosts.Kind) = when (kind) {
         Hosts.Kind.SLIDESHOW -> K_SLIDESHOW
         Hosts.Kind.SET -> K_SET
