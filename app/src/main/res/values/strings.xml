@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PRTV TV A</string>
+    <string name="host">Хост</string>
+    <string name="slideshow">Слайд-шоу</string>
+    <string name="set">Подборка</string>
+    <string name="stream">Поток</string>
+    <string name="show">Показать</string>
+    <string name="hint_code">номер</string>
+    <string name="enter_code">Введите номер</string>
+    <string name="diagnostics">Диагностика</string>
+    <string name="back">Назад</string>
+    <string name="clear_log">Очистить лог</string>
+    <string name="device_line">%1$s · сборка %2$s</string>
+    <string name="preset_calendar">Календарь</string>
+    <string name="preset_pizza">Пицца</string>
+    <string name="preset_olympic">Олимпиада</string>
+</resources>
