@@ -88,7 +88,7 @@ class PlayerActivity : Activity() {
     /** MENU на пульте открывает диагностику, не выходя из показа. */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_INFO) {
-            startActivity(Intent(this, DiagActivity::class.java))
+            startActivity(Intent(this, SystemActivity::class.java))
             return true
         }
         return super.onKeyDown(keyCode, event)
