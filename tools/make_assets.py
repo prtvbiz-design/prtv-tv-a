@@ -54,15 +54,40 @@ def make_banner(path):
     centered(d, (0, 0, w, h - 30), "PRTV TV A", font(38), FG)
     centered(d, (0, h - 66, w, h - 6), "тестовое приложение", font(17), (138, 138, 150))
     img.save(path)
+DESIGN = {
+    # имя -> (ширина, высота). Размеры взяты из макета приложения.
+    # Это ЗАГЛУШКИ: настоящие файлы кладутся в app/src/main/res/drawable/
+    # и перекрывают сгенерированные.
+    "start_photo": (1024, 973),
+    "prtv_logo_header": (1024, 164),
+}
+def make_placeholder(name, size, path):
+    w, h = size
+    img = Image.new("RGBA", (w, h), BG + (255,))
+    d = ImageDraw.Draw(img)
+    step = max(40, w // 16)
+    for x in range(0, w, step):
+        d.line([(x, 0), (x, h)], fill=(30, 32, 38), width=1)
+    for y in range(0, h, step):
+        d.line([(0, y), (w, y)], fill=(30, 32, 38), width=1)
+    centered(d, (0, 0, w, h), name, font(max(14, h // 8)), (90, 95, 105))
+    img.save(path)
 def main():
+    drawable_dir = os.path.join(RES, "drawable")
+    os.makedirs(drawable_dir, exist_ok=True)
+    for name, size in DESIGN.items():
+        target = os.path.join(drawable_dir, name + ".png")
+        if os.path.exists(target):
+            print("skip (настоящий файл на месте)", name)
+            continue
+        make_placeholder(name, size, target)
+        print("placeholder", name, size)
     for folder, size in MIPMAPS.items():
         target = os.path.join(RES, folder)
         os.makedirs(target, exist_ok=True)
         make_icon(size, os.path.join(target, "ic_launcher.png"))
         print("icon", folder, size)
-    drawable = os.path.join(RES, "drawable")
-    os.makedirs(drawable, exist_ok=True)
-    make_banner(os.path.join(drawable, "banner.png"))
+    make_banner(os.path.join(drawable_dir, "banner.png"))
     print("banner 320x180")
 if __name__ == "__main__":
     main()
