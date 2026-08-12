@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Цвета взяты из макета приложения (StartScreen.styles.ts).
+  Менять только вместе с макетом.
+-->
+<resources>
+    <color name="screen_bg">#171B24</color>
+    <color name="panel_bg">#1F2022</color>
+    <color name="field_bg_active">#222222</color>
+    <color name="field_border">#CDD2DA</color>
+    <color name="field_border_focus">#FFFFFF</color>
+    <color name="text_primary">#F3F3F4</color>
+    <color name="text_secondary">#B0B0B0</color>
+    <color name="text_muted">#8A8A96</color>
+    <color name="panel_divider">#3A3F47</color>
+    <color name="neutral_button">#E0E0E0</color>
+    <color name="neutral_button_border">#D0D0D0</color>
+    <!-- Цветные кнопки пульта -->
+    <color name="key_green">#2BC24A</color>
+    <color name="key_yellow">#E8C020</color>
+    <color name="key_red">#FF1F2D</color>
+    <color name="lang_active">#E62121</color>
+    <color name="log_text">#9EE493</color>
+</resources>
