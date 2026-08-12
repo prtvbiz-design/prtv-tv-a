@@ -1,18 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Подписи взяты из локализации приложения (src/localization/ru.ts),
+  чтобы интерфейс совпадал с тем, к чему привыкли клиенты.
+-->
 <resources>
     <string name="app_name">PRTV TV A</string>
+    <string name="brand_tagline">онлайн конструктор слайд-шоу</string>
+    <string name="section_settings">Настройки</string>
+    <string name="start_title">ВВЕДИТЕ КОД ПОДБОРКИ, СЛАЙД-ШОУ ИЛИ КОД ПОТОКА</string>
+    <string name="instructions_fmt">которые Вы создали на %1$s, например, 11111/111111.</string>
+    <string name="language">Язык</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_en">English</string>
     <string name="host">Хост</string>
-    <string name="slideshow">Слайд-шоу</string>
-    <string name="set">Подборка</string>
-    <string name="stream">Поток</string>
-    <string name="show">Показать</string>
-    <string name="hint_code">номер</string>
+    <string name="host_su">prtv.su</string>
+    <string name="host_pro">prtv.pro</string>
+    <string name="host_test">new-test</string>
+    <string name="input_slideshow">Слайд-шоу</string>
+    <string name="input_stream">Запуск по расписанию</string>
+    <string name="input_set">Меню слайд-шоу</string>
+    <string name="hint_slideshow">Код слайд-шоу</string>
+    <string name="hint_stream">Код потока</string>
+    <string name="hint_set">Код подборки</string>
+    <string name="hint_green">Нажмите зелёную кнопку</string>
+    <string name="hint_yellow">Нажмите жёлтую кнопку</string>
+    <string name="hint_red">Нажмите красную кнопку</string>
     <string name="enter_code">Введите номер</string>
-    <string name="diagnostics">Диагностика</string>
-    <string name="back">Назад</string>
-    <string name="clear_log">Очистить лог</string>
-    <string name="device_line">%1$s · сборка %2$s</string>
+    <string name="cache_title">Кеширование</string>
+    <string name="cache_enable">Включить</string>
+    <string name="cache_enabled">Включено</string>
+    <string name="cache_clear">Очистить</string>
+    <string name="cache_photo_threshold">Порог фото, KB</string>
+    <string name="cache_threshold_hint">Лимит</string>
+    <string name="cache_stats_empty">Файлов в кеше: 0</string>
+    <string name="not_implemented_yet">Появится на следующем этапе</string>
+    <string name="sleep_title">Режим сна</string>
+    <string name="sleep_on">Режим сна вкл.</string>
+    <string name="sleep_off">Режим сна выкл.</string>
+    <string name="turn_on_at">Подъём в</string>
+    <string name="turn_off_at">Сон в</string>
+    <string name="time_hint">ЧЧ:ММ</string>
+    <string name="usb_slideshow">Слайд-шоу с USB носителя</string>
+    <string name="system_data">Системные данные</string>
+    <string name="presets">Пресеты сравнения:</string>
     <string name="preset_calendar">Календарь</string>
     <string name="preset_pizza">Пицца</string>
     <string name="preset_olympic">Олимпиада</string>
+    <string name="system_status_title">Системный статус</string>
+    <string name="doctor_title">Проверка слайд-шоу</string>
+    <string name="doctor_hint">Проверка нагружает устройство и займёт около минуты. Картинка будет подтормаживать — это нормально.</string>
+    <string name="doctor_run">Запустить проверку</string>
+    <string name="event_log">Журнал событий</string>
+    <string name="clear_log">Очистить лог</string>
+    <string name="no_events">— событий нет —</string>
+    <string name="back">Назад</string>
+    <string name="device_line">%1$s · сборка %2$s</string>
+    <string name="version_line">OS: %1$s · App: %2$s</string>
 </resources>
