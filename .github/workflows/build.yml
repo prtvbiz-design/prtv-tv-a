@@ -1,0 +1,31 @@
+name: build
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate icons and TV banner
+        run: |
+          pip install pillow
+          python3 tools/make_assets.py
+      - uses: android-actions/setup-android@v3
+      - name: Gradle wrapper
+        run: gradle wrapper --gradle-version 8.7
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prtv-tv-a-debug
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
