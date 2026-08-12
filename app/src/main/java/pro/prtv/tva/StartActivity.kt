@@ -1,105 +1,184 @@
 package pro.prtv.tva
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.SystemClock
-import android.view.View
+import android.view.KeyEvent
 import android.widget.Button
 import android.widget.EditText
-import android.widget.RadioButton
 import android.widget.TextView
 import android.widget.Toast
+import java.util.Locale
 /**
- * Экран ввода. Три сущности — слайд-шоу, подборка, поток (R-IN-01),
- * три хоста, последний код каждого типа сохраняется (R-IN-02).
+ * Главный экран. Три сущности показа, панель настроек, вход в системные
+ * данные. Подписи и раскладка повторяют макет приложения.
  *
- * Экрана подборки со своей навигацией здесь ещё нет — это Э2.
- * Код подборки пока открывается тем же трактом показа.
+ * Управление рассчитано на пульт: цветные кнопки запускают показ напрямую,
+ * без перехода к полю ввода.
  */
 class StartActivity : Activity() {
     private lateinit var prefs: Prefs
+    private lateinit var slideshow: EditText
+    private lateinit var stream: EditText
+    private lateinit var set: EditText
     /** Гард от повторного запуска: 2500 мс. */
     private var lastLaunchAt = 0L
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(applyLanguage(base))
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_start)
         prefs = Prefs(this)
         EventLog.add("start", "device=${prefs.deviceId} build=${BuildConfig.VERSION_NAME}")
-        val slideshow = findViewById<EditText>(R.id.inputSlideshow)
-        val set = findViewById<EditText>(R.id.inputSet)
-        val stream = findViewById<EditText>(R.id.inputStream)
+        slideshow = findViewById(R.id.inputSlideshow)
+        stream = findViewById(R.id.inputStream)
+        set = findViewById(R.id.inputSet)
         slideshow.setText(prefs.code(Hosts.Kind.SLIDESHOW))
-        set.setText(prefs.code(Hosts.Kind.SET))
         stream.setText(prefs.code(Hosts.Kind.STREAM))
-        val hostSu = findViewById<RadioButton>(R.id.hostSu)
-        val hostPro = findViewById<RadioButton>(R.id.hostPro)
-        val hostNewTest = findViewById<RadioButton>(R.id.hostNewTest)
-        when (prefs.host) {
-            Hosts.SU -> hostSu.isChecked = true
-            Hosts.NEW_TEST -> hostNewTest.isChecked = true
-            else -> hostPro.isChecked = true
-        }
+        set.setText(prefs.code(Hosts.Kind.SET))
         findViewById<TextView>(R.id.deviceLine).text =
             getString(R.string.device_line, prefs.deviceId, BuildConfig.VERSION_NAME)
-        val selectedHost = {
-            when {
-                hostSu.isChecked -> Hosts.SU
-                hostNewTest.isChecked -> Hosts.NEW_TEST
-                else -> Hosts.PRO
-            }
-        }
-        val launch = { kind: Hosts.Kind, field: EditText ->
-            val code = field.text.toString().trim()
-            if (code.isEmpty()) {
-                Toast.makeText(this, R.string.enter_code, Toast.LENGTH_SHORT).show()
-            } else if (SystemClock.elapsedRealtime() - lastLaunchAt < 2500) {
-                // молча: повторное нажатие пульта в пределах гарда
-            } else {
-                lastLaunchAt = SystemClock.elapsedRealtime()
-                val host = selectedHost()
-                prefs.host = host
-                prefs.setCode(kind, code)
-                prefs.lastKind = kind
-                startActivity(
-                    Intent(this, PlayerActivity::class.java)
-                        .putExtra(PlayerActivity.EXTRA_HOST, host)
-                        .putExtra(PlayerActivity.EXTRA_KIND, kind.name)
-                        .putExtra(PlayerActivity.EXTRA_CODE, code)
-                )
-            }
-        }
-        findViewById<Button>(R.id.btnSlideshow).setOnClickListener {
-            launch(Hosts.Kind.SLIDESHOW, slideshow)
-        }
-        findViewById<Button>(R.id.btnSet).setOnClickListener {
-            launch(Hosts.Kind.SET, set)
-        }
-        findViewById<Button>(R.id.btnStream).setOnClickListener {
-            launch(Hosts.Kind.STREAM, stream)
-        }
-        findViewById<Button>(R.id.btnDiag).setOnClickListener {
-            startActivity(Intent(this, DiagActivity::class.java))
-        }
+        findViewById<TextView>(R.id.versionLine).text = getString(
+            R.string.version_line,
+            android.os.Build.VERSION.RELEASE,
+            BuildConfig.VERSION_NAME,
+        )
+        findViewById<TextView>(R.id.instructions).text =
+            getString(R.string.instructions_fmt, prefs.host)
+        wireHosts()
+        wireLanguage()
+        wireCacheAndSleep()
         wirePresets()
+        findViewById<Button>(R.id.btnSystemData).setOnClickListener {
+            startActivity(Intent(this, SystemActivity::class.java))
+        }
+        findViewById<Button>(R.id.btnUsbSlideshow).setOnClickListener {
+            Toast.makeText(this, R.string.not_implemented_yet, Toast.LENGTH_SHORT).show()
+        }
+        slideshow.requestFocus()
+    }
+    /** Цветные кнопки пульта запускают показ соответствующего типа. */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        RemoteKeys.kindFor(keyCode)?.let { kind ->
+            launch(kind, fieldFor(kind))
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+    private fun fieldFor(kind: Hosts.Kind): EditText = when (kind) {
+        Hosts.Kind.SLIDESHOW -> slideshow
+        Hosts.Kind.STREAM -> stream
+        Hosts.Kind.SET -> set
+    }
+    private fun launch(kind: Hosts.Kind, field: EditText) {
+        val code = field.text.toString().trim()
+        if (code.isEmpty()) {
+            Toast.makeText(this, R.string.enter_code, Toast.LENGTH_SHORT).show()
+            field.requestFocus()
+            return
+        }
+        // повторное нажатие пульта в пределах гарда игнорируется молча
+        if (SystemClock.elapsedRealtime() - lastLaunchAt < 2500) return
+        lastLaunchAt = SystemClock.elapsedRealtime()
+        prefs.setCode(kind, code)
+        prefs.lastKind = kind
+        startActivity(
+            Intent(this, PlayerActivity::class.java)
+                .putExtra(PlayerActivity.EXTRA_HOST, prefs.host)
+                .putExtra(PlayerActivity.EXTRA_KIND, kind.name)
+                .putExtra(PlayerActivity.EXTRA_CODE, code)
+        )
+    }
+    private fun wireHosts() {
+        val apply = { host: String ->
+            prefs.host = host
+            findViewById<TextView>(R.id.instructions).text =
+                getString(R.string.instructions_fmt, host)
+            Toast.makeText(this, "${host} · ${Hosts.schemaName(host)}", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.btnHostSu).setOnClickListener { apply(Hosts.SU) }
+        findViewById<Button>(R.id.btnHostPro).setOnClickListener { apply(Hosts.PRO) }
+        findViewById<Button>(R.id.btnHostTest).setOnClickListener { apply(Hosts.NEW_TEST) }
+    }
+    private fun wireLanguage() {
+        val switch = { code: String ->
+            if (prefs.language != code) {
+                prefs.language = code
+                recreate()
+            }
+        }
+        findViewById<Button>(R.id.btnLangRu).setOnClickListener { switch("ru") }
+        findViewById<Button>(R.id.btnLangEn).setOnClickListener { switch("en") }
     }
     /**
-     * Пресеты из B3 — три пары «то же СШ, разный хост», по которым уже есть
-     * базовые цифры Playwright. Нужны для сравнения, не для показа клиенту.
+     * Настройки кэша и сна сохраняются, но пока ни на что не влияют:
+     * сами механизмы появятся на следующих этапах. Кнопки честно
+     * сообщают об этом, чтобы интерфейс не обещал несуществующего.
      */
+    private fun wireCacheAndSleep() {
+        val cacheToggle = findViewById<Button>(R.id.btnCacheToggle)
+        val threshold = findViewById<EditText>(R.id.inputCacheThreshold)
+        val sleepToggle = findViewById<Button>(R.id.btnSleepToggle)
+        val wakeAt = findViewById<EditText>(R.id.inputWakeAt)
+        val sleepAt = findViewById<EditText>(R.id.inputSleepAt)
+        if (prefs.cacheThresholdKb > 0) threshold.setText(prefs.cacheThresholdKb.toString())
+        wakeAt.setText(prefs.wakeAt)
+        sleepAt.setText(prefs.sleepAt)
+        val renderCache = {
+            cacheToggle.setText(
+                if (prefs.cacheEnabled) R.string.cache_enabled else R.string.cache_enable
+            )
+        }
+        val renderSleep = {
+            sleepToggle.setText(if (prefs.sleepEnabled) R.string.sleep_on else R.string.sleep_off)
+        }
+        renderCache()
+        renderSleep()
+        cacheToggle.setOnClickListener {
+            prefs.cacheEnabled = !prefs.cacheEnabled
+            renderCache()
+            Toast.makeText(this, R.string.not_implemented_yet, Toast.LENGTH_SHORT).show()
+        }
+        sleepToggle.setOnClickListener {
+            prefs.sleepEnabled = !prefs.sleepEnabled
+            renderSleep()
+            Toast.makeText(this, R.string.not_implemented_yet, Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.btnCacheClear).setOnClickListener {
+            Toast.makeText(this, R.string.not_implemented_yet, Toast.LENGTH_SHORT).show()
+        }
+    }
+    /** Пресеты из B3: пары «то же СШ, разный хост». Технический элемент. */
     private fun wirePresets() {
-        val row = findViewById<View>(R.id.presetsRow)
-        val slideshow = findViewById<EditText>(R.id.inputSlideshow)
-        val hostSu = findViewById<RadioButton>(R.id.hostSu)
-        val hostPro = findViewById<RadioButton>(R.id.hostPro)
         val apply = { su: String, pro: String ->
-            if (hostSu.isChecked) slideshow.setText(su) else {
-                hostPro.isChecked = true
-                slideshow.setText(pro)
-            }
+            slideshow.setText(if (Hosts.isLegacySchema(prefs.host)) su else pro)
+            slideshow.requestFocus()
         }
         findViewById<Button>(R.id.presetCalendar).setOnClickListener { apply("11211", "0012276") }
         findViewById<Button>(R.id.presetPizza).setOnClickListener { apply("11472", "0012277") }
         findViewById<Button>(R.id.presetOlympic).setOnClickListener { apply("32024", "0012278") }
-        row.visibility = View.VISIBLE
+    }
+    override fun onPause() {
+        super.onPause()
+        prefs.setCode(Hosts.Kind.SLIDESHOW, slideshow.text.toString())
+        prefs.setCode(Hosts.Kind.STREAM, stream.text.toString())
+        prefs.setCode(Hosts.Kind.SET, set.text.toString())
+        findViewById<EditText>(R.id.inputCacheThreshold).text.toString().trim()
+            .toIntOrNull()?.let { prefs.cacheThresholdKb = it }
+        prefs.wakeAt = findViewById<EditText>(R.id.inputWakeAt).text.toString()
+        prefs.sleepAt = findViewById<EditText>(R.id.inputSleepAt).text.toString()
+    }
+    private fun applyLanguage(base: Context): Context {
+        val code = base.getSharedPreferences("prtv_tv_a", Context.MODE_PRIVATE)
+            .getString("lang", "") ?: ""
+        if (code.isEmpty()) return base
+        val locale = Locale(code)
+        Locale.setDefault(locale)
+        val config = Configuration(base.resources.configuration)
+        config.setLocale(locale)
+        return base.createConfigurationContext(config)
     }
 }
