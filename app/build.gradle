@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+android {
+    namespace 'pro.prtv.tva'
+    compileSdk 34
+    defaultConfig {
+        applicationId "pro.prtv.tva"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "A1.0"
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    signingConfigs {
+        // Ключ приходит из секретов Actions. Релиз debug-ключом не подписывается,
+        // keystore в репозитории не хранится.
+        release {
+            if (System.getenv("PRTV_KEYSTORE_PATH")) {
+                storeFile file(System.getenv("PRTV_KEYSTORE_PATH"))
+                storePassword System.getenv("PRTV_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("PRTV_KEY_ALIAS")
+                keyPassword System.getenv("PRTV_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (System.getenv("PRTV_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+dependencies {
+    // Зависимостей нет намеренно. Всё, что нужно Э1, есть в платформе.
+}
