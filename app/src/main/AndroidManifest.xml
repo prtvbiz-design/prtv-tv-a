@@ -42,7 +42,7 @@
             android:theme="@style/PlayerTheme"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"/>
         <activity
-            android:name="pro.prtv.tva.DiagActivity"
+            android:name="pro.prtv.tva.SystemActivity"
             android:exported="false"
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"/>
