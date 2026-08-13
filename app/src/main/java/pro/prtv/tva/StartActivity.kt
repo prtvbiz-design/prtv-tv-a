@@ -107,6 +107,30 @@ class StartActivity : Activity() {
         Hosts.Kind.STREAM to stream,
         Hosts.Kind.SET to set,
     )
+    private fun fieldFor(kind: Hosts.Kind): EditText = when (kind) {
+        Hosts.Kind.SLIDESHOW -> slideshow
+        Hosts.Kind.STREAM -> stream
+        Hosts.Kind.SET -> set
+    }
+    private fun launch(kind: Hosts.Kind, field: EditText) {
+        val code = field.text.toString().trim()
+        if (code.isEmpty()) {
+            Toast.makeText(this, R.string.enter_code, Toast.LENGTH_SHORT).show()
+            field.requestFocus()
+            return
+        }
+        // повторное нажатие в пределах гарда игнорируется молча
+        if (SystemClock.elapsedRealtime() - lastLaunchAt < 2500) return
+        lastLaunchAt = SystemClock.elapsedRealtime()
+        prefs.setCode(kind, code)
+        prefs.lastKind = kind
+        startActivity(
+            Intent(this, PlayerActivity::class.java)
+                .putExtra(PlayerActivity.EXTRA_HOST, prefs.host)
+                .putExtra(PlayerActivity.EXTRA_KIND, kind.name)
+                .putExtra(PlayerActivity.EXTRA_CODE, code)
+        )
+    }
     private fun wireHosts() {
         val apply = { host: String ->
             prefs.host = host
