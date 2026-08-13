@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -52,6 +53,7 @@ class StartActivity : Activity() {
         wireLanguage()
         wireCacheAndSleep()
         wirePresets()
+        wireLaunchControls()
         findViewById<Button>(R.id.btnSystemData).setOnClickListener {
             startActivity(Intent(this, SystemActivity::class.java))
         }
@@ -60,38 +62,51 @@ class StartActivity : Activity() {
         }
         slideshow.requestFocus()
     }
-    /** Цветные кнопки пульта запускают показ соответствующего типа. */
+    /**
+     * Цветные кнопки пульта переводят фокус на соответствующее поле —
+     * как в приложении PRTV. Показ они не запускают.
+     *
+     * Каждое нажатие пишется в журнал: пульты разных производителей шлют
+     * разные коды, и увидеть их можно только на живом устройстве —
+     * экран «Системные данные» показывает, что именно пришло.
+     */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        EventLog.add("key", "code=$keyCode ${KeyEvent.keyCodeToString(keyCode)}")
         RemoteKeys.kindFor(keyCode)?.let { kind ->
-            launch(kind, fieldFor(kind))
+            fieldFor(kind).requestFocus()
             return true
         }
         return super.onKeyDown(keyCode, event)
     }
-    private fun fieldFor(kind: Hosts.Kind): EditText = when (kind) {
-        Hosts.Kind.SLIDESHOW -> slideshow
-        Hosts.Kind.STREAM -> stream
-        Hosts.Kind.SET -> set
-    }
-    private fun launch(kind: Hosts.Kind, field: EditText) {
-        val code = field.text.toString().trim()
-        if (code.isEmpty()) {
-            Toast.makeText(this, R.string.enter_code, Toast.LENGTH_SHORT).show()
-            field.requestFocus()
-            return
+    /**
+     * Запуск показа. Повторяет поведение приложения PRTV: номер набирается
+     * в поле, а запускает его действие «Готово» экранной клавиатуры.
+     *
+     * OK на поле намеренно НЕ перехватывается — этим нажатием система
+     * открывает клавиатуру, без него набрать номер нечем.
+     */
+    private fun wireLaunchControls() {
+        for ((kind, field) in fields()) {
+            field.setOnEditorActionListener { _, actionId, event ->
+                val done = actionId == EditorInfo.IME_ACTION_DONE ||
+                    actionId == EditorInfo.IME_ACTION_GO ||
+                    actionId == EditorInfo.IME_NULL
+                val enterUp = event?.keyCode == KeyEvent.KEYCODE_ENTER &&
+                    event.action == KeyEvent.ACTION_UP
+                if (done || enterUp) {
+                    launch(kind, field)
+                    true
+                } else {
+                    false
+                }
+            }
         }
-        // повторное нажатие пульта в пределах гарда игнорируется молча
-        if (SystemClock.elapsedRealtime() - lastLaunchAt < 2500) return
-        lastLaunchAt = SystemClock.elapsedRealtime()
-        prefs.setCode(kind, code)
-        prefs.lastKind = kind
-        startActivity(
-            Intent(this, PlayerActivity::class.java)
-                .putExtra(PlayerActivity.EXTRA_HOST, prefs.host)
-                .putExtra(PlayerActivity.EXTRA_KIND, kind.name)
-                .putExtra(PlayerActivity.EXTRA_CODE, code)
-        )
     }
+    private fun fields(): List<Pair<Hosts.Kind, EditText>> = listOf(
+        Hosts.Kind.SLIDESHOW to slideshow,
+        Hosts.Kind.STREAM to stream,
+        Hosts.Kind.SET to set,
+    )
     private fun wireHosts() {
         val apply = { host: String ->
             prefs.host = host
