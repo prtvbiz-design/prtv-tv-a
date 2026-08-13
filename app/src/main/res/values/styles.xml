@@ -9,8 +9,8 @@
     <style name="SectionTitle">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">20dp</item>
-        <item name="android:layout_marginBottom">6dp</item>
+        <item name="android:layout_marginTop">14dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:textSize">15sp</item>
         <item name="android:textStyle">bold</item>
@@ -18,8 +18,8 @@
     <style name="FieldLabel">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">8dp</item>
-        <item name="android:layout_marginBottom">3dp</item>
+        <item name="android:layout_marginTop">6dp</item>
+        <item name="android:layout_marginBottom">2dp</item>
         <item name="android:textColor">@color/text_secondary</item>
         <item name="android:textSize">12sp</item>
     </style>
@@ -30,7 +30,7 @@
         <item name="android:textColor">#202020</item>
         <item name="android:textSize">13sp</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:minHeight">40dp</item>
+        <item name="android:minHeight">36dp</item>
         <item name="android:focusable">true</item>
     </style>
     <style name="PresetButton" parent="PanelButton">
