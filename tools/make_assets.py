@@ -58,7 +58,8 @@ DESIGN = {
     # имя -> (ширина, высота). Размеры взяты из макета приложения.
     # Это ЗАГЛУШКИ: настоящие файлы кладутся в app/src/main/res/drawable/
     # и перекрывают сгенерированные.
-    "start_photo": (1024, 973),
+    # start_photo убран: фотопанель теперь набор panel_1..panel_4 в
+    # drawable-nodpi, это настоящие файлы, заглушки им не нужны.
     "prtv_logo_header": (1024, 164),
 }
 def make_placeholder(name, size, path):

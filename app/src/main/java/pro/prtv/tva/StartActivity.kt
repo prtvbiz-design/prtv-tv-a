@@ -31,6 +31,7 @@ class StartActivity : Activity(), KeyRouter.Screen {
 
     private lateinit var prefs: Prefs
     private lateinit var router: KeyRouter
+    private var panels: PanelRotator? = null
     private lateinit var slideshow: EditText
     private lateinit var stream: EditText
     private lateinit var set: EditText
@@ -90,7 +91,30 @@ class StartActivity : Activity(), KeyRouter.Screen {
             Toast.makeText(this, R.string.not_implemented_yet, Toast.LENGTH_SHORT).show()
         }
 
+        panels = PanelRotator(
+            findViewById(R.id.panelBack),
+            findViewById(R.id.panelFront),
+        )
+
         applyChainState()
+    }
+
+    /**
+     * Смена картинок идёт, только пока окно действительно на экране
+     * и владеет фокусом. Экранная клавиатура на телевизоре открывается
+     * поверх и забирает фокус окна — этого условия достаточно, чтобы
+     * панель замерла на время набора номера, и не нужно угадывать
+     * высоту клавиатуры.
+     */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) panels?.start() else panels?.stop()
+    }
+
+    override fun onPause() {
+        panels?.stop()
+        savePreferences()
+        super.onPause()
     }
 
     override fun onResume() {
@@ -412,8 +436,7 @@ class StartActivity : Activity(), KeyRouter.Screen {
         findViewById<Button>(R.id.presetOlympic).setOnClickListener { apply("32024", "0012278") }
     }
 
-    override fun onPause() {
-        super.onPause()
+    private fun savePreferences() {
         prefs.setCode(Hosts.Kind.SLIDESHOW, slideshow.text.toString())
         prefs.setCode(Hosts.Kind.STREAM, stream.text.toString())
         prefs.setCode(Hosts.Kind.SET, set.text.toString())

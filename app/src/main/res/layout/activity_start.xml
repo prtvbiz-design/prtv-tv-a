@@ -146,11 +146,25 @@
         android:layout_width="0dp"
         android:layout_weight="68"
         android:layout_height="match_parent">
+        <!--
+          Две картинки одна поверх другой: смена идёт перекрёстным
+          затуханием, поэтому в момент перехода на экране нужны обе.
+          Нижняя показывает текущую, верхняя проявляется поверх неё,
+          после чего роли меняются местами.
+        -->
         <ImageView
+            android:id="@+id/panelBack"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:src="@drawable/start_photo"
+            android:src="@drawable/panel_1"
+            android:contentDescription="@null"/>
+        <ImageView
+            android:id="@+id/panelFront"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:alpha="0"
             android:contentDescription="@null"/>
         <!-- Затемнение: поверх фотографии текст должен читаться -->
         <View
