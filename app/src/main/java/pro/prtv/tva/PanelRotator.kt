@@ -63,14 +63,13 @@ class PanelRotator(
 
     companion object {
         /**
-         * Четыре сцены применения: кофейня, ресторан, пекарня, отель.
-         * Полный круг — сорок секунд.
+         * Три сцены применения: ресторан, пекарня, отель.
+         * Полный круг — тридцать секунд.
          */
         private val PANELS = intArrayOf(
             R.drawable.panel_1,
             R.drawable.panel_2,
             R.drawable.panel_3,
-            R.drawable.panel_4,
         )
 
         private const val HOLD_MS = 10_000L

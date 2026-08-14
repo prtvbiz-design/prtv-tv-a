@@ -40,4 +40,11 @@
     <string name="clear_log">Clear log</string>
     <string name="no_events">— no events —</string>
     <string name="back">Back</string>
+    <string name="instructions_title">Instructions</string>
+    <string name="instr_switch_slides">Switch slides</string>
+    <string name="instr_move_within">Move within a slide</string>
+    <string name="instr_qr">Guides for sets, slideshows and streams are on our Rutube channel</string>
+    <string name="sleep_unavailable">HDMI-CEC is not available on this device</string>
+    <string name="threshold_off">do not cache</string>
+    <string name="threshold_fmt">from %1$d Kb</string>
 </resources>

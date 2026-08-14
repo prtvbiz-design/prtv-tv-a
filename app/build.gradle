@@ -16,6 +16,10 @@ android {
         // невозможности обновляться (A-OP-09).
         versionCode project.property('prtvVersionCode').toInteger()
         versionName project.property('prtvVersionName')
+        // Дата сборки в строку состояния: по ней поддержка понимает,
+        // насколько свежая копия стоит на устройстве.
+        buildConfigField "String", "BUILD_DATE",
+                "\"" + new Date().format('dd.MM.yy') + "\""
     }
 
     buildFeatures {

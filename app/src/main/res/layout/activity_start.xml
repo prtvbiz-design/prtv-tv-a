@@ -1,156 +1,268 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Главный экран. Макет повторяет StartScreen приложения:
-  тёмный фон, колонка настроек, фотопанель с полями ввода.
-  Пропорции колонок и отступы взяты из макета в процентах экрана и
-  переведены в веса. Точная сверка «пиксель в пиксель» возможна только
-  по снимкам с телевизора — до неё макет считается приближением.
-  Все элементы фокусируемые: экран управляется пультом, а не касанием.
+  Главный экран. Раскладка повторяет боевое приложение: одно тёмное
+  полотно, рабочая колонка слева, панель изображения справа во всю высоту.
+
+  Порядок сверху вниз: шапка, ввод, настройки, инструкции, служебное.
+  Прокрутки нет и быть не должно — экран настройки смотрят один раз,
+  и в этот раз всё должно быть видно сразу.
+
+  Высотный бюджет: телевизор 1080p при плотности xhdpi даёт 960×540 dp.
+  Сумма блоков ниже укладывается примерно в 500 dp вместе с отступами.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
     android:background="@color/screen_bg">
-    <!-- ═══ Колонка настроек ═══ -->
-    <ScrollView
+
+    <!-- ═══════════ рабочая колонка ═══════════ -->
+    <LinearLayout
         android:layout_width="0dp"
-        android:layout_weight="32"
+        android:layout_weight="62"
         android:layout_height="match_parent"
-        android:background="@color/panel_bg"
-        android:paddingStart="26dp"
-        android:paddingEnd="18dp"
+        android:orientation="vertical"
+        android:paddingStart="34dp"
+        android:paddingEnd="26dp"
         android:paddingTop="18dp"
-        android:paddingBottom="12dp">
+        android:paddingBottom="14dp">
+
+        <!-- ─── шапка ─── -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <ImageView
+                android:layout_width="128dp"
+                android:layout_height="22dp"
+                android:scaleType="fitStart"
+                android:src="@drawable/prtv_logo_header"
+                android:contentDescription="@null"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:text="@string/brand_tagline"
                 android:textColor="@color/text_muted"
                 android:textSize="13sp"/>
-            <TextView
-                style="@style/SectionTitle"
-                android:text="@string/section_settings"/>
-            <TextView style="@style/FieldLabel" android:text="@string/language"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <Button
-                    android:id="@+id/btnLangRu"
-                    style="@style/PanelButton"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:text="@string/lang_ru"/>
-                <Button
-                    android:id="@+id/btnLangEn"
-                    style="@style/PanelButton"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:text="@string/lang_en"/>
-            </LinearLayout>
-            <!-- Хоста в макете нет: в боевом приложении он вшит.
-                 Здесь это ключевой параметр сравнения. -->
-            <TextView style="@style/FieldLabel" android:text="@string/host"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <Button android:id="@+id/btnHostAuto" style="@style/PanelButton"
-                    android:layout_width="0dp" android:layout_weight="1"
-                    android:text="@string/host_auto"/>
-                <Button android:id="@+id/btnHostSu" style="@style/PanelButton"
-                    android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:text="@string/host_su"/>
-                <Button android:id="@+id/btnHostPro" style="@style/PanelButton"
-                    android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:text="@string/host_pro"/>
-            </LinearLayout>
-            <TextView style="@style/SectionTitle" android:text="@string/cache_title"/>
-            <Button
-                android:id="@+id/btnCacheToggle"
-                style="@style/PanelButton"
-                android:layout_width="match_parent"
-                android:text="@string/cache_enable"/>
-            <TextView style="@style/FieldLabel" android:text="@string/cache_photo_threshold"/>
-            <EditText
-                android:id="@+id/inputCacheThreshold"
-                style="@style/PanelField"
-                android:inputType="number"
-                android:hint="@string/cache_threshold_hint"
-                android:importantForAutofill="no"/>
-            <Button
-                android:id="@+id/btnCacheClear"
-                style="@style/PanelButton"
-                android:layout_width="match_parent"
-                android:layout_marginTop="8dp"
-                android:text="@string/cache_clear"/>
-            <TextView
-                android:id="@+id/cacheStats"
-                style="@style/FieldLabel"
-                android:text="@string/cache_stats_empty"/>
-            <TextView style="@style/SectionTitle" android:text="@string/sleep_title"/>
-            <Button
-                android:id="@+id/btnSleepToggle"
-                style="@style/PanelButton"
-                android:layout_width="match_parent"
-                android:text="@string/sleep_off"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp">
-                <LinearLayout
-                    android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:orientation="vertical">
-                    <TextView style="@style/FieldLabel" android:text="@string/turn_on_at"/>
-                    <EditText android:id="@+id/inputWakeAt" style="@style/PanelField"
-                        android:inputType="time" android:hint="@string/time_hint"
-                        android:importantForAutofill="no"/>
-                </LinearLayout>
-                <LinearLayout
-                    android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:orientation="vertical"
-                    android:layout_marginStart="8dp">
-                    <TextView style="@style/FieldLabel" android:text="@string/turn_off_at"/>
-                    <EditText android:id="@+id/inputSleepAt" style="@style/PanelField"
-                        android:inputType="time" android:hint="@string/time_hint"
-                        android:importantForAutofill="no"/>
+        </LinearLayout>
+
+        <!-- ─── ввод ─── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <LinearLayout style="@style/InputCell">
+                <TextView style="@style/InputTopLabel" android:text="@string/input_slideshow"/>
+                <EditText android:id="@+id/inputSlideshow" style="@style/CodeField"
+                    android:hint="@string/hint_slideshow"
+                    android:singleLine="true" android:imeOptions="actionDone"/>
+                <LinearLayout style="@style/HintRow">
+                    <View style="@style/HintDot" android:background="@drawable/dot_green"/>
+                    <TextView style="@style/HintText" android:text="@string/hint_green"/>
                 </LinearLayout>
             </LinearLayout>
-            <!-- За этой кнопкой живёт и доктор -->
+
+            <LinearLayout style="@style/InputCell" android:layout_marginStart="14dp">
+                <TextView style="@style/InputTopLabel" android:text="@string/input_stream"/>
+                <EditText android:id="@+id/inputStream" style="@style/CodeField"
+                    android:hint="@string/hint_stream"
+                    android:singleLine="true" android:imeOptions="actionDone"/>
+                <LinearLayout style="@style/HintRow">
+                    <View style="@style/HintDot" android:background="@drawable/dot_yellow"/>
+                    <TextView style="@style/HintText" android:text="@string/hint_yellow"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout style="@style/InputCell" android:layout_marginStart="14dp">
+                <TextView style="@style/InputTopLabel" android:text="@string/input_set"/>
+                <EditText android:id="@+id/inputSet" style="@style/CodeField"
+                    android:hint="@string/hint_set"
+                    android:singleLine="true" android:imeOptions="actionDone"/>
+                <LinearLayout style="@style/HintRow">
+                    <View style="@style/HintDot" android:background="@drawable/dot_red"/>
+                    <TextView style="@style/HintText" android:text="@string/hint_red"/>
+                </LinearLayout>
+            </LinearLayout>
+
             <Button
-                android:id="@+id/btnSystemData"
+                android:id="@+id/btnUsbSlideshow"
                 style="@style/PanelButton"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="14dp"
                 android:layout_marginTop="20dp"
-                android:text="@string/system_data"/>
-            <TextView
-                android:id="@+id/versionLine"
+                android:text="@string/usb_slideshow"/>
+        </LinearLayout>
+
+        <!-- ─── настройки ─── -->
+        <TextView style="@style/SectionTitle" android:text="@string/section_settings"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="bottom">
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"/>
+                android:orientation="vertical">
+                <TextView style="@style/FieldLabel" android:text="@string/language"/>
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <Button android:id="@+id/btnLangRu" style="@style/PanelButton"
+                        android:minWidth="96dp" android:text="@string/lang_ru"/>
+                    <Button android:id="@+id/btnLangEn" style="@style/PanelButton"
+                        android:layout_marginStart="8dp"
+                        android:minWidth="96dp" android:text="@string/lang_en"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="40dp"
+                android:orientation="vertical">
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView style="@style/FieldLabel" android:text="@string/cache_title"/>
+                    <Switch android:id="@+id/switchCache" style="@style/PanelSwitch"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <Spinner android:id="@+id/inputCacheThreshold"
+                        android:layout_width="140dp"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/field_bg"
+                        android:popupBackground="@color/panel_bg"/>
+                    <Button android:id="@+id/btnCacheClear" style="@style/PanelButton"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/cache_clear"/>
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
-    </ScrollView>
-    <!-- ═══ Фотопанель с полями ввода ═══ -->
+
+        <!-- ─── режим сна ─── -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView style="@style/FieldLabel" android:text="@string/sleep_title"/>
+            <Switch android:id="@+id/switchSleep" style="@style/PanelSwitch"/>
+            <TextView
+                android:id="@+id/sleepNote"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:textColor="@color/text_muted"
+                android:textSize="11sp"
+                android:visibility="gone"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                <TextView style="@style/FieldLabel" android:text="@string/turn_on_at"/>
+                <EditText android:id="@+id/inputWakeAt" style="@style/PanelField"
+                    android:layout_width="112dp"
+                    android:hint="@string/time_hint"
+                    android:singleLine="true" android:imeOptions="actionDone"/>
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="18dp"
+                android:orientation="vertical">
+                <TextView style="@style/FieldLabel" android:text="@string/turn_off_at"/>
+                <EditText android:id="@+id/inputSleepAt" style="@style/PanelField"
+                    android:layout_width="112dp"
+                    android:hint="@string/time_hint"
+                    android:singleLine="true" android:imeOptions="actionDone"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ─── инструкции ─── -->
+        <TextView style="@style/SectionTitle" android:text="@string/instructions_title"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="56dp" android:layout_height="56dp"
+                android:src="@drawable/dpad_slides"
+                android:contentDescription="@null"/>
+            <TextView style="@style/HintText"
+                android:layout_width="76dp"
+                android:text="@string/instr_switch_slides"/>
+
+            <ImageView
+                android:layout_width="56dp" android:layout_height="56dp"
+                android:layout_marginStart="16dp"
+                android:src="@drawable/dpad_within"
+                android:contentDescription="@null"/>
+            <TextView style="@style/HintText"
+                android:layout_width="76dp"
+                android:text="@string/instr_move_within"/>
+
+            <ImageView
+                android:layout_width="56dp" android:layout_height="56dp"
+                android:layout_marginStart="20dp"
+                android:src="@drawable/qr_help"
+                android:contentDescription="@null"/>
+            <TextView style="@style/HintText"
+                android:layout_width="150dp"
+                android:text="@string/instr_qr"/>
+        </LinearLayout>
+
+        <!-- ─── служебное ─── -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <Button
+            android:id="@+id/btnSystemData"
+            style="@style/PanelButton"
+            android:text="@string/system_data"/>
+
+        <TextView
+            android:id="@+id/statusLine"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/text_muted"
+            android:textSize="10sp"/>
+    </LinearLayout>
+
+    <!-- ═══════════ панель изображения ═══════════ -->
     <FrameLayout
         android:layout_width="0dp"
-        android:layout_weight="68"
+        android:layout_weight="38"
         android:layout_height="match_parent">
         <!--
           Две картинки одна поверх другой: смена идёт перекрёстным
-          затуханием, поэтому в момент перехода на экране нужны обе.
-          Нижняя показывает текущую, верхняя проявляется поверх неё,
-          после чего роли меняются местами.
+          затуханием, поэтому в момент перехода нужны обе.
         -->
         <ImageView
             android:id="@+id/panelBack"
@@ -166,110 +278,10 @@
             android:scaleType="centerCrop"
             android:alpha="0"
             android:contentDescription="@null"/>
-        <!-- Затемнение: поверх фотографии текст должен читаться -->
+        <!-- Затемнение: панель не должна перетягивать внимание с фокуса -->
         <View
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="#99000000"/>
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:paddingStart="44dp"
-            android:paddingEnd="44dp"
-            android:paddingTop="30dp"
-            android:paddingBottom="22dp">
-            <ImageView
-                android:layout_width="220dp"
-                android:layout_height="36dp"
-                android:src="@drawable/prtv_logo_header"
-                android:scaleType="fitStart"
-                android:contentDescription="@null"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:text="@string/start_title"
-                android:textColor="@color/text_primary"
-                android:textSize="19sp"
-                android:textStyle="bold"/>
-            <TextView
-                android:id="@+id/instructions"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp"/>
-            <!-- Три поля: зелёная, жёлтая, красная кнопки пульта -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
-                android:orientation="horizontal">
-                <LinearLayout style="@style/InputCell">
-                    <TextView style="@style/InputTopLabel" android:text="@string/input_slideshow"/>
-                    <EditText android:id="@+id/inputSlideshow" style="@style/CodeField"
-                        android:hint="@string/hint_slideshow" android:importantForAutofill="no"
-                        android:singleLine="true" android:imeOptions="actionDone"/>
-                    <LinearLayout style="@style/HintRow">
-                        <View style="@style/HintDot" android:background="@drawable/dot_green"/>
-                        <TextView style="@style/HintText" android:text="@string/hint_green"/>
-                    </LinearLayout>
-                </LinearLayout>
-                <LinearLayout style="@style/InputCell" android:layout_marginStart="18dp">
-                    <TextView style="@style/InputTopLabel" android:text="@string/input_stream"/>
-                    <EditText android:id="@+id/inputStream" style="@style/CodeField"
-                        android:hint="@string/hint_stream" android:importantForAutofill="no"
-                        android:singleLine="true" android:imeOptions="actionDone"/>
-                    <LinearLayout style="@style/HintRow">
-                        <View style="@style/HintDot" android:background="@drawable/dot_yellow"/>
-                        <TextView style="@style/HintText" android:text="@string/hint_yellow"/>
-                    </LinearLayout>
-                </LinearLayout>
-                <LinearLayout style="@style/InputCell" android:layout_marginStart="18dp">
-                    <TextView style="@style/InputTopLabel" android:text="@string/input_set"/>
-                    <EditText android:id="@+id/inputSet" style="@style/CodeField"
-                        android:maxLength="7"
-                        android:hint="@string/hint_set" android:importantForAutofill="no"
-                        android:singleLine="true" android:imeOptions="actionDone"/>
-                    <LinearLayout style="@style/HintRow">
-                        <View style="@style/HintDot" android:background="@drawable/dot_red"/>
-                        <TextView style="@style/HintText" android:text="@string/hint_red"/>
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
-            <Button
-                android:id="@+id/btnUsbSlideshow"
-                style="@style/PanelButton"
-                android:layout_width="wrap_content"
-                android:layout_marginTop="22dp"
-                android:text="@string/usb_slideshow"/>
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"/>
-            <!-- Пресеты сравнения. Технический элемент, не для клиента. -->
-            <LinearLayout
-                android:id="@+id/presetsRow"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <TextView style="@style/HintText" android:text="@string/presets"
-                    android:layout_gravity="center_vertical"/>
-                <Button android:id="@+id/presetCalendar" style="@style/PresetButton"
-                    android:text="@string/preset_calendar"/>
-                <Button android:id="@+id/presetPizza" style="@style/PresetButton"
-                    android:text="@string/preset_pizza"/>
-                <Button android:id="@+id/presetOlympic" style="@style/PresetButton"
-                    android:text="@string/preset_olympic"/>
-            </LinearLayout>
-            <TextView
-                android:id="@+id/deviceLine"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"/>
-        </LinearLayout>
+            android:background="#4D000000"/>
     </FrameLayout>
 </LinearLayout>

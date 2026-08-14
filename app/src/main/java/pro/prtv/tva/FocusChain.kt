@@ -35,30 +35,21 @@ object FocusChain {
         R.id.btnLangRu,
         R.id.btnLangEn,
         R.id.inputCacheThreshold,
-        R.id.btnCacheToggle,
+        R.id.switchCache,
         R.id.btnCacheClear,
-        R.id.btnSleepToggle,
+        R.id.switchSleep,
         R.id.inputWakeAt,
         R.id.inputSleepAt,
         R.id.btnSystemData,
     )
 
     /**
-     * Наши добавления, которых в боевом приложении нет: выбор хоста
-     * и пресеты для сравнительных прогонов. Стоят в конце намеренно —
-     * тогда участок цепочки, который ощущает клиент, совпадает с боевым
-     * элемент в элемент, а тестовый инструментарий не мешается под пультом.
+     * Ничего сверх боевого набора здесь нет. Выбор хоста и пресеты
+     * сравнения убраны с главного экрана: хост определяется по коду,
+     * а пресеты — инструмент разработчика, им не место под пультом
+     * у человека, который просто хочет включить показ.
      */
-    private val EXTRA = intArrayOf(
-        R.id.btnHostAuto,
-        R.id.btnHostSu,
-        R.id.btnHostPro,
-        R.id.presetCalendar,
-        R.id.presetPizza,
-        R.id.presetOlympic,
-    )
-
-    val ORDER: IntArray = CORE + EXTRA
+    val ORDER: IntArray = CORE
 
     /**
      * Пять особых переходов влево. В оригинале они прописаны отдельными
@@ -70,9 +61,9 @@ object FocusChain {
     private val LEFT_OVERRIDE = mapOf(
         R.id.inputSleepAt to R.id.inputWakeAt,
         R.id.inputWakeAt to R.id.btnCacheClear,
-        R.id.btnSleepToggle to R.id.btnCacheToggle,
+        R.id.switchSleep to R.id.switchCache,
         R.id.btnCacheClear to R.id.inputCacheThreshold,
-        R.id.btnCacheToggle to R.id.inputCacheThreshold,
+        R.id.switchCache to R.id.inputCacheThreshold,
     )
 
     /** Вперёд по цепочке. С последнего элемента — заворот на первый. */

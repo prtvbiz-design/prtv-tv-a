@@ -43,6 +43,14 @@
     <string name="time_hint">ЧЧ:ММ</string>
     <string name="usb_slideshow">Слайд-шоу с USB носителя</string>
     <string name="system_data">Системные данные</string>
+    <string name="instructions_title">Инструкции</string>
+    <string name="instr_switch_slides">Переключение слайдов</string>
+    <string name="instr_move_within">Перемещение по слайду</string>
+    <string name="instr_qr">Инструкции по созданию подборок, слайд-шоу и потоков — на нашем Rutube-канале</string>
+    <string name="status_line_fmt">OS:AndroidTV%1$s | App:%2$s | Date: %3$s | host: %4$s</string>
+    <string name="sleep_unavailable">HDMI-CEC недоступен на этом устройстве</string>
+    <string name="threshold_off">не кэшировать</string>
+    <string name="threshold_fmt">от %1$d Кб</string>
     <string name="presets">Пресеты сравнения:</string>
     <string name="preset_calendar">Календарь</string>
     <string name="preset_pizza">Пицца</string>

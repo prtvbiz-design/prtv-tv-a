@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Свой вид пункта списка: штатный simple_spinner_item берёт цвет текста
+  из темы и на тёмном фоне телевизора оказывается почти чёрным на чёрном.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="9dp"
+    android:paddingBottom="9dp"
+    android:singleLine="true"
+    android:textColor="@color/text_primary"
+    android:textSize="14sp"/>

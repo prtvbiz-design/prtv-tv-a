@@ -4,47 +4,53 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Spinner
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import java.util.Locale
 
 /**
- * Главный экран. Три сущности показа, панель настроек, вход в системные
- * данные. Подписи и раскладка повторяют макет приложения.
+ * Главный экран.
  *
- * Управление рассчитано на пульт. Показ запускает действие «Готово»
- * экранной клавиатуры, а не отдельная кнопка: цветные кнопки только
- * переводят фокус на соответствующее поле.
+ * Раскладка повторяет боевое приложение: рабочая колонка слева —
+ * шапка, ввод, настройки, инструкции, служебное; панель изображения
+ * справа во всю высоту. Выбора хоста на экране нет: адрес выводится
+ * из длины кода, как в боевом (resolveBaseUrlForCode).
  *
- * Обход фокуса — линейная цепочка (FocusChain), а не пространственная
- * навигация средствами системы. Клавиши проходят через одну лестницу
- * приоритетов (KeyRouter).
+ * Показ запускает действие «Готово» экранной клавиатуры. Цветные кнопки
+ * только переводят фокус. Обход фокуса — линейная цепочка (FocusChain),
+ * клавиши проходят через лестницу приоритетов (KeyRouter).
  */
 class StartActivity : Activity(), KeyRouter.Screen {
 
     private lateinit var prefs: Prefs
     private lateinit var router: KeyRouter
-    private var panels: PanelRotator? = null
     private lateinit var slideshow: EditText
     private lateinit var stream: EditText
     private lateinit var set: EditText
+    private lateinit var cacheSwitch: Switch
+    private lateinit var sleepSwitch: Switch
+    private lateinit var threshold: Spinner
+    private var panels: PanelRotator? = null
 
     /** Гард от повторного запуска: 2500 мс. */
     private var lastLaunchAt = 0L
 
     /**
-     * Гард «назад»: 900 мс после появления экрана.
-     *
-     * Нужен из-за возврата с показа. Пульт успевает прислать второе
-     * нажатие раньше, чем главный экран отрисуется, и приложение
-     * закрывается сразу после выхода из слайд-шоу.
+     * Гард «назад»: 900 мс после появления экрана. Нужен из-за возврата
+     * с показа — пульт успевает прислать второе нажатие раньше, чем
+     * экран отрисуется, и приложение закрывается сразу после выхода.
      */
     private var backAllowedAt = 0L
 
@@ -58,30 +64,23 @@ class StartActivity : Activity(), KeyRouter.Screen {
         prefs = Prefs(this)
         router = KeyRouter(this)
         EventLog.add("start", "device=${prefs.deviceId} build=${BuildConfig.VERSION_NAME}")
-        // touchMode=true объясняет отказ requestFocus на кнопках без
-        // focusableInTouchMode — одна строка вместо часа гаданий
         EventLog.add("start", "touchMode=" + window.decorView.isInTouchMode)
 
         slideshow = findViewById(R.id.inputSlideshow)
         stream = findViewById(R.id.inputStream)
         set = findViewById(R.id.inputSet)
+        cacheSwitch = findViewById(R.id.switchCache)
+        sleepSwitch = findViewById(R.id.switchSleep)
+        threshold = findViewById(R.id.inputCacheThreshold)
+
         slideshow.setText(prefs.code(Hosts.Kind.SLIDESHOW))
         stream.setText(prefs.code(Hosts.Kind.STREAM))
         set.setText(prefs.code(Hosts.Kind.SET))
 
-        findViewById<TextView>(R.id.deviceLine).text =
-            getString(R.string.device_line, prefs.deviceId, BuildConfig.VERSION_NAME)
-        findViewById<TextView>(R.id.versionLine).text = getString(
-            R.string.version_line,
-            android.os.Build.VERSION.RELEASE,
-            BuildConfig.VERSION_NAME,
-        )
-        renderHostHint()
-
-        wireHosts()
+        renderStatusLine()
         wireLanguage()
-        wireCacheAndSleep()
-        wirePresets()
+        wireCache()
+        wireSleep()
         wireLaunchControls()
 
         findViewById<Button>(R.id.btnSystemData).setOnClickListener {
@@ -100,21 +99,14 @@ class StartActivity : Activity(), KeyRouter.Screen {
     }
 
     /**
-     * Смена картинок идёт, только пока окно действительно на экране
-     * и владеет фокусом. Экранная клавиатура на телевизоре открывается
-     * поверх и забирает фокус окна — этого условия достаточно, чтобы
-     * панель замерла на время набора номера, и не нужно угадывать
-     * высоту клавиатуры.
+     * Смена картинок идёт, только пока окно на экране и владеет фокусом.
+     * Экранная клавиатура открывается поверх и забирает фокус окна —
+     * этого условия достаточно, чтобы панель замерла на время набора,
+     * и не нужно угадывать высоту клавиатуры.
      */
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) panels?.start() else panels?.stop()
-    }
-
-    override fun onPause() {
-        panels?.stop()
-        savePreferences()
-        super.onPause()
     }
 
     override fun onResume() {
@@ -123,15 +115,19 @@ class StartActivity : Activity(), KeyRouter.Screen {
         applyChainState()
     }
 
+    override fun onPause() {
+        panels?.stop()
+        savePreferences()
+        super.onPause()
+    }
+
     /* ──────────────────────── клавиши ──────────────────────── */
 
     /**
-     * Перехват до передачи в иерархию представлений. Иначе стрелки
-     * съедала бы система своей пространственной навигацией, и линейная
-     * цепочка не работала бы вовсе.
-     *
-     * Цифры и OK через лестницу не проходят и попадают в поле ввода —
-     * без этого номер нечем набрать.
+     * Перехват до передачи в иерархию представлений: иначе стрелки
+     * съедала бы системная пространственная навигация и линейная
+     * цепочка не работала бы. Цифры и OK через лестницу не проходят
+     * и попадают в поле ввода — без этого номер нечем набрать.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (!::router.isInitialized) return super.dispatchKeyEvent(event)
@@ -151,12 +147,8 @@ class StartActivity : Activity(), KeyRouter.Screen {
     /**
      * Влево и вправо ведут по цепочке. Вверх и вниз намеренно не
      * перехватываются: в оригинале цепочка описана только для
-     * горизонтали, а придумывать за него поведение вертикали — ровно
-     * та ошибка, от которой предостерегает A-6.
-     *
-     * Элементы вне цепочки сделаны нефокусируемыми, поэтому системная
-     * навигация вверх-вниз не может увести фокус туда, куда цепочка
-     * его не пускает.
+     * горизонтали. Элементы вне цепочки сделаны нефокусируемыми,
+     * поэтому системная вертикаль не уведёт фокус лишнее.
      */
     override fun onDirection(keyCode: Int): Boolean {
         val forward = keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
@@ -169,19 +161,13 @@ class StartActivity : Activity(), KeyRouter.Screen {
         } else {
             FocusChain.previous(currentId) { isChainEnabled(it) }
         }
-
-        // Фокус оказался вне цепочки — например, на контейнере без id.
-        // Раньше это молча ничего не делало: нажатие мы съедали, а фокус
-        // не двигали, и стрелка выглядела мёртвой. Заводим его внутрь.
         if (targetId == View.NO_ID || !FocusChain.contains(targetId)) {
             targetId = FocusChain.firstEnabled { isChainEnabled(it) } ?: return true
         }
-
         if (targetId == currentId) {
             EventLog.add("focus", nameOf(currentId) + " край цепочки")
             return true
         }
-
         val target = findViewById<View>(targetId)
         if (target == null) {
             EventLog.add("focus", "цель " + nameOf(targetId) + " не найдена")
@@ -201,17 +187,10 @@ class StartActivity : Activity(), KeyRouter.Screen {
         return true
     }
 
-    /** Имя элемента вместо голого числа: журнал читают с экрана телевизора. */
-    private fun nameOf(id: Int): String =
-        if (id == View.NO_ID) "-"
-        else runCatching { resources.getResourceEntryName(id) }.getOrDefault("id" + id)
-
     /**
-     * Цветные кнопки переводят фокус на соответствующее поле — как в
-     * приложении PRTV. Показ они не запускают.
-     *
-     * Каждое нажатие пишется в журнал: пульты разных производителей шлют
-     * разные коды, и увидеть их можно только на живом устройстве.
+     * Цветные кнопки переводят фокус на соответствующее поле. Показ они
+     * не запускают. Каждое нажатие пишется в журнал: пульты разных
+     * производителей шлют разные коды, и увидеть их можно только живьём.
      */
     override fun onColorKey(keyCode: Int): Boolean {
         val kind = RemoteKeys.kindFor(keyCode) ?: return false
@@ -223,26 +202,24 @@ class StartActivity : Activity(), KeyRouter.Screen {
         EventLog.add("key", "code=$keyCode ${KeyEvent.keyCodeToString(keyCode)} → $verdict")
     }
 
+    /** Имя элемента вместо голого числа: журнал читают с экрана телевизора. */
+    private fun nameOf(id: Int): String =
+        if (id == View.NO_ID) "-"
+        else runCatching { resources.getResourceEntryName(id) }.getOrDefault("id" + id)
+
     /* ──────────────────── доступность элементов ──────────────────── */
 
     /**
-     * Условия доступности из оригинала (isIdEnabled). Отключённый элемент
-     * выпадает из цепочки и перестаёт быть фокусируемым.
+     * Условия доступности из оригинала. Отключённый элемент выпадает
+     * из цепочки и перестаёт быть фокусируемым.
      *
-     * Два места, где мы пока отступаем от оригинала, и оба временные:
-     *
-     * playFlash — накопитель не поддерживается до Э4, поэтому элемент
-     * всегда отключён. На устройстве без флешки боевое ведёт себя так же.
-     *
-     * timerToggle — «режим сна доступен» в оригинале означает поддержку
-     * со стороны железа, а её мы узнаем только на Э6 вместе с CEC.
-     * Пока считаем доступным всегда, иначе вся ветка сна выпадет из
-     * цепочки и проверить её будет нечем.
+     * Кнопка USB отключена до Э4: накопителя приложение пока не знает.
+     * На устройстве без флешки боевое ведёт себя так же.
      */
     private fun isChainEnabled(id: Int): Boolean = when (id) {
         R.id.btnUsbSlideshow -> USB_SUPPORTED
         R.id.inputCacheThreshold, R.id.btnCacheClear -> prefs.cacheEnabled
-        R.id.btnSleepToggle -> SLEEP_AVAILABLE
+        R.id.switchSleep -> SLEEP_AVAILABLE
         R.id.inputWakeAt, R.id.inputSleepAt -> SLEEP_AVAILABLE && prefs.sleepEnabled
         else -> true
     }
@@ -253,10 +230,11 @@ class StartActivity : Activity(), KeyRouter.Screen {
             val on = isChainEnabled(id)
             view.isEnabled = on
             view.isFocusable = on
-            // Не только для полей: если окно окажется в touch mode, кнопка
-            // без этого флага откажет в requestFocus и стрелка не сработает.
             view.isFocusableInTouchMode = on
         }
+        findViewById<TextView>(R.id.sleepNote).visibility =
+            if (SLEEP_AVAILABLE) View.GONE else View.VISIBLE
+
         val current = currentFocus
         if (current == null || !FocusChain.contains(current.id) || !isChainEnabled(current.id)) {
             FocusChain.firstEnabled { isChainEnabled(it) }?.let { id ->
@@ -268,13 +246,6 @@ class StartActivity : Activity(), KeyRouter.Screen {
 
     /* ──────────────────────── запуск показа ──────────────────────── */
 
-    /**
-     * Номер набирается в поле, а запускает его действие «Готово»
-     * экранной клавиатуры.
-     *
-     * OK на поле намеренно НЕ перехватывается — этим нажатием система
-     * открывает клавиатуру, без него набрать номер нечем.
-     */
     private fun wireLaunchControls() {
         for ((kind, field) in fields()) {
             field.setOnEditorActionListener { _, actionId, event ->
@@ -318,13 +289,11 @@ class StartActivity : Activity(), KeyRouter.Screen {
         prefs.setCode(kind, code)
         prefs.lastKind = kind
 
-        // Хост выводится из кода, как в боевом приложении
-        // (resolveBaseUrlForCode). Ручной выбор перекрывает автоопределение.
+        // Хост выводится из кода, как в боевом (resolveBaseUrlForCode)
         val host = Hosts.resolveForCode(code, prefs.host)
         EventLog.add(
             "host",
-            "код " + code.length + " знаков · настройка " + Hosts.label(prefs.host) +
-                " -> " + host + " " + Hosts.schemaName(host),
+            "код " + code.length + " знаков -> " + host + " " + Hosts.schemaName(host),
         )
 
         startActivity(
@@ -337,111 +306,99 @@ class StartActivity : Activity(), KeyRouter.Screen {
 
     /* ──────────────────────── панель настроек ──────────────────────── */
 
-    private fun wireHosts() {
-        val apply = { host: String ->
-            prefs.host = host
-            renderHostHint()
-            val note = if (host == Hosts.AUTO) {
-                getString(R.string.host_auto) + " · по длине кода"
-            } else {
-                host + " · " + Hosts.schemaName(host)
-            }
-            Toast.makeText(this, note, Toast.LENGTH_SHORT).show()
-        }
-        findViewById<Button>(R.id.btnHostAuto).setOnClickListener { apply(Hosts.AUTO) }
-        findViewById<Button>(R.id.btnHostSu).setOnClickListener { apply(Hosts.SU) }
-        findViewById<Button>(R.id.btnHostPro).setOnClickListener { apply(Hosts.PRO) }
+    private fun renderStatusLine() {
+        findViewById<TextView>(R.id.statusLine).text = getString(
+            R.string.status_line_fmt,
+            Build.VERSION.SDK_INT.toString(),
+            BuildConfig.VERSION_NAME,
+            BuildConfig.BUILD_DATE,
+            Hosts.label(prefs.host),
+        )
     }
 
-    private fun renderHostHint() {
-        val shown = if (prefs.host == Hosts.AUTO) {
-            getString(R.string.host_auto_hint)
-        } else {
-            prefs.host
-        }
-        findViewById<TextView>(R.id.instructions).text =
-            getString(R.string.instructions_fmt, shown)
-    }
-
+    /**
+     * Активный выбор языка — заливка, фокус — рамка. Это два разных
+     * состояния, и путать их нельзя: иначе непонятно, где ты находишься.
+     */
     private fun wireLanguage() {
+        val ru = findViewById<Button>(R.id.btnLangRu)
+        val en = findViewById<Button>(R.id.btnLangEn)
+        val isEn = prefs.language == "en"
+        ru.setBackgroundResource(
+            if (isEn) R.drawable.panel_button else R.drawable.panel_button_active
+        )
+        en.setBackgroundResource(
+            if (isEn) R.drawable.panel_button_active else R.drawable.panel_button
+        )
         val switch = { code: String ->
             if (prefs.language != code) {
                 prefs.language = code
                 recreate()
             }
         }
-        findViewById<Button>(R.id.btnLangRu).setOnClickListener { switch("ru") }
-        findViewById<Button>(R.id.btnLangEn).setOnClickListener { switch("en") }
+        ru.setOnClickListener { switch("ru") }
+        en.setOnClickListener { switch("en") }
     }
 
     /**
-     * Настройки кэша и сна сохраняются, но пока ни на что не влияют:
-     * сами механизмы появятся на следующих этапах. Кнопки честно
-     * сообщают об этом, чтобы интерфейс не обещал несуществующего.
-     *
-     * При этом переключатели уже управляют доступностью соседних
-     * элементов — механика цепочки работает на реальных условиях,
-     * а не на заглушках.
+     * Кэш: переключатель и порог списком, как в боевом. Сам механизм
+     * появится на Э3, но переключатель уже управляет доступностью
+     * соседних элементов — механика цепочки работает на реальных
+     * условиях, а не на заглушках.
      */
-    private fun wireCacheAndSleep() {
-        val cacheToggle = findViewById<Button>(R.id.btnCacheToggle)
-        val threshold = findViewById<EditText>(R.id.inputCacheThreshold)
-        val sleepToggle = findViewById<Button>(R.id.btnSleepToggle)
-        val wakeAt = findViewById<EditText>(R.id.inputWakeAt)
-        val sleepAt = findViewById<EditText>(R.id.inputSleepAt)
-
-        if (prefs.cacheThresholdKb > 0) threshold.setText(prefs.cacheThresholdKb.toString())
-        wakeAt.setText(prefs.wakeAt)
-        sleepAt.setText(prefs.sleepAt)
-
-        val renderCache = {
-            cacheToggle.setText(
-                if (prefs.cacheEnabled) R.string.cache_enabled else R.string.cache_enable
-            )
-        }
-        val renderSleep = {
-            sleepToggle.setText(if (prefs.sleepEnabled) R.string.sleep_on else R.string.sleep_off)
-        }
-        renderCache()
-        renderSleep()
-
-        cacheToggle.setOnClickListener {
-            prefs.cacheEnabled = !prefs.cacheEnabled
-            renderCache()
+    private fun wireCache() {
+        cacheSwitch.isChecked = prefs.cacheEnabled
+        cacheSwitch.setOnCheckedChangeListener { _, checked ->
+            prefs.cacheEnabled = checked
             applyChainState()
             Toast.makeText(this, R.string.not_implemented_yet, Toast.LENGTH_SHORT).show()
         }
-        sleepToggle.setOnClickListener {
-            prefs.sleepEnabled = !prefs.sleepEnabled
-            renderSleep()
-            applyChainState()
-            Toast.makeText(this, R.string.not_implemented_yet, Toast.LENGTH_SHORT).show()
+
+        val labels = THRESHOLDS.map {
+            if (it == 0) getString(R.string.threshold_off)
+            else getString(R.string.threshold_fmt, it)
         }
+        val adapter = ArrayAdapter(this, R.layout.spinner_item, labels)
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        threshold.adapter = adapter
+        val current = THRESHOLDS.indexOf(prefs.cacheThresholdKb)
+        threshold.setSelection(if (current >= 0) current else 0)
+        threshold.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                prefs.cacheThresholdKb = THRESHOLDS[pos]
+            }
+
+            override fun onNothingSelected(p: AdapterView<*>?) = Unit
+        }
+
         findViewById<Button>(R.id.btnCacheClear).setOnClickListener {
             Toast.makeText(this, R.string.not_implemented_yet, Toast.LENGTH_SHORT).show()
         }
     }
 
-    /** Пресеты из B3: пары «то же СШ, разный хост». Технический элемент. */
-    private fun wirePresets() {
-        val apply = { su: String, pro: String ->
-            // В режиме «Авто» подставляем семизначный код: он сам уедет на pro.
-            // Чтобы прогнать ту же пару на su, надо явно выбрать prtv.su —
-            // тогда подставится короткий номер.
-            slideshow.setText(if (prefs.host == Hosts.SU) su else pro)
-            slideshow.requestFocus()
+    /**
+     * Режим сна. В боевом секция скрывается целиком, когда HDMI-CEC
+     * недоступен, и понять это со стороны невозможно — полдня уходит
+     * на уверенность, что функции нет вовсе. Мы показываем её всегда:
+     * при недоступном CEC поля станут неактивны, а рядом встанет строка
+     * с причиной.
+     */
+    private fun wireSleep() {
+        findViewById<TextView>(R.id.sleepNote).setText(R.string.sleep_unavailable)
+        sleepSwitch.isChecked = prefs.sleepEnabled
+        sleepSwitch.setOnCheckedChangeListener { _, checked ->
+            prefs.sleepEnabled = checked
+            applyChainState()
+            Toast.makeText(this, R.string.not_implemented_yet, Toast.LENGTH_SHORT).show()
         }
-        findViewById<Button>(R.id.presetCalendar).setOnClickListener { apply("11211", "0012276") }
-        findViewById<Button>(R.id.presetPizza).setOnClickListener { apply("11472", "0012277") }
-        findViewById<Button>(R.id.presetOlympic).setOnClickListener { apply("32024", "0012278") }
+        findViewById<EditText>(R.id.inputWakeAt).setText(prefs.wakeAt)
+        findViewById<EditText>(R.id.inputSleepAt).setText(prefs.sleepAt)
     }
 
     private fun savePreferences() {
         prefs.setCode(Hosts.Kind.SLIDESHOW, slideshow.text.toString())
         prefs.setCode(Hosts.Kind.STREAM, stream.text.toString())
         prefs.setCode(Hosts.Kind.SET, set.text.toString())
-        findViewById<EditText>(R.id.inputCacheThreshold).text.toString().trim()
-            .toIntOrNull()?.let { prefs.cacheThresholdKb = it }
         prefs.wakeAt = findViewById<EditText>(R.id.inputWakeAt).text.toString()
         prefs.sleepAt = findViewById<EditText>(R.id.inputSleepAt).text.toString()
     }
@@ -464,7 +421,15 @@ class StartActivity : Activity(), KeyRouter.Screen {
         /** Накопитель появится на Э4. */
         private const val USB_SUPPORTED = false
 
-        /** Поддержку сна железом узнаем на Э6 вместе с CEC. */
+        /**
+         * Доступность режима сна в боевом определяется по HDMI-CEC
+         * (canStandby, standby_not_available). Свою проверку заведём
+         * на Э6 вместе с расписанием; до тех пор считаем доступным,
+         * иначе ветку нечем проверять.
+         */
         private const val SLEEP_AVAILABLE = true
+
+        /** Значения порога из локализации боевого приложения. */
+        private val THRESHOLDS = listOf(0, 100, 500, 1024)
     }
 }
