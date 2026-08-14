@@ -29,7 +29,13 @@ class SystemActivity : Activity() {
         findViewById<TextView>(R.id.systemStatus).text = buildString {
             appendLine("PRTV TV A ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
             appendLine("ID устройства: ${prefs.deviceId}")
-            appendLine("Хост: ${prefs.host} (${Hosts.schemaName(prefs.host)})")
+            // В режиме «Авто» показывать схему бессмысленно: она разная
+            // для разных кодов и определяется в момент запуска показа.
+            if (prefs.host == Hosts.AUTO) {
+                appendLine("Хост: авто, по длине кода (${Hosts.PRO_CODE_MIN_LENGTH}+ знаков → ${Hosts.PRO})")
+            } else {
+                appendLine("Хост: ${prefs.host} (${Hosts.schemaName(prefs.host)})")
+            }
             appendLine("Последний тип: ${prefs.lastKind.name}")
             appendLine("Устройство: ${Build.MANUFACTURER} ${Build.MODEL}")
             appendLine("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")

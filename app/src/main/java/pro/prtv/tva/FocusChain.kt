@@ -50,6 +50,7 @@ object FocusChain {
      * элемент в элемент, а тестовый инструментарий не мешается под пультом.
      */
     private val EXTRA = intArrayOf(
+        R.id.btnHostAuto,
         R.id.btnHostSu,
         R.id.btnHostPro,
         R.id.presetCalendar,

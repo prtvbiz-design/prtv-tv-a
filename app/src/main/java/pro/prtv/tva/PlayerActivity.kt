@@ -22,7 +22,15 @@ import android.webkit.WebViewClient
  * каталога — страница со сменного носителя не должна получать доступ
  * к приватным файлам приложения.
  *
- * Watchdog — Э2. Здесь только замер времени до готовности страницы.
+ * Клавиши показа маршрутизируются по семейству хоста (A-PL-01).
+ * Это не косметика: одна и та же кнопка пульта доходит до страницы
+ * разными путями. На pro страница слушает сами события клавиш и листает
+ * сама. На su она их не слушает — ждёт сообщение от оболочки, и без него
+ * стрелки не делают ничего. В боевом приложении это разведено тремя
+ * режимами resolveRouteMode(); здесь воспроизводится минимально
+ * необходимая часть.
+ *
+ * Watchdog — следующий заход. Здесь только замер готовности страницы.
  */
 class PlayerActivity : Activity() {
     companion object {
@@ -33,6 +41,8 @@ class PlayerActivity : Activity() {
     private lateinit var web: WebView
     private var startedAt = 0L
     private var firstPaintReported = false
+    private var legacyRoute = false
+    private var bridgeReady = false
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +53,7 @@ class PlayerActivity : Activity() {
             .getOrDefault(Hosts.Kind.SLIDESHOW)
         val code = intent.getStringExtra(EXTRA_CODE).orEmpty()
         val url = Hosts.playbackUrl(host, kind, code)
+        legacyRoute = Hosts.isLegacySchema(host)
         web = WebView(this)
         web.setBackgroundColor(Color.BLACK)
         setContentView(web)
@@ -65,6 +76,7 @@ class PlayerActivity : Activity() {
         web.webChromeClient = WebChromeClient()
         web.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, finishedUrl: String?) {
+                if (legacyRoute) installBridge()
                 if (!firstPaintReported) {
                     firstPaintReported = true
                     val ms = SystemClock.elapsedRealtime() - startedAt
@@ -81,7 +93,11 @@ class PlayerActivity : Activity() {
                 }
             }
         }
-        EventLog.add("player", "open $host ${Hosts.schemaName(host)} ${kind.name} -> $url")
+        EventLog.add(
+            "player",
+            "open $host ${Hosts.schemaName(host)} ${kind.name} route=" +
+                (if (legacyRoute) "legacy" else "direct") + " -> " + url,
+        )
         startedAt = SystemClock.elapsedRealtime()
         web.loadUrl(url)
     }
@@ -92,6 +108,89 @@ class PlayerActivity : Activity() {
             return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    /**
+     * Мост для su-семейства.
+     *
+     * Страница на prtv.su не реагирует на события клавиш — она ждёт
+     * сообщение от оболочки. Сообщение шлём тремя способами сразу:
+     * window.postMessage, MessageEvent на window и на document. Какой
+     * из них слушает конкретная версия плеера, снаружи не видно, а
+     * лишние доставки безвредны.
+     *
+     * Только ES5: на приставках встречается старый WebView, и стрелочные
+     * функции с let его роняют.
+     */
+    private fun installBridge() {
+        if (bridgeReady) return
+        bridgeReady = true
+        val js = """
+            (function () {
+              if (window.__prtvSend) { return; }
+              window.__prtvSend = function (msg) {
+                var payload = String(msg);
+                try { window.postMessage(payload, '*'); } catch (e) {}
+                try {
+                  var ev = new MessageEvent('message', { data: payload });
+                  window.dispatchEvent(ev);
+                  document.dispatchEvent(ev);
+                } catch (e) {
+                  try {
+                    var ev2 = document.createEvent('Event');
+                    ev2.initEvent('message', true, true);
+                    ev2.data = payload;
+                    window.dispatchEvent(ev2);
+                    document.dispatchEvent(ev2);
+                  } catch (e2) {}
+                }
+              };
+              true;
+            })();
+        """.trimIndent()
+        web.evaluateJavascript(js, null)
+        EventLog.add("player", "мост legacy установлен")
+    }
+
+    private fun sendLegacy(message: String) {
+        if (!bridgeReady) return
+        web.evaluateJavascript("window.__prtvSend && window.__prtvSend('" + message + "');", null)
+        EventLog.add("player", "postMessage " + message)
+    }
+
+    /**
+     * Событие клавиши НЕ поглощается: оно уходит дальше в WebView.
+     * На pro этого достаточно — страница листает сама. На su вдобавок
+     * отправляется сообщение, потому что событий она не слышит.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+                // A-PL-02: сначала история страницы, потом выход
+                if (web.canGoBack()) {
+                    EventLog.add("player", "back -> история страницы")
+                    web.goBack()
+                    return true
+                }
+            } else if (legacyRoute) {
+                legacyMessageFor(event.keyCode)?.let { sendLegacy(it) }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    /**
+     * Соответствие взято из боевого приложения: вправо и влево листают,
+     * вверх и вниз прокручивают, цифры выбирают позицию в подборке.
+     */
+    private fun legacyMessageFor(keyCode: Int): String? = when (keyCode) {
+        KeyEvent.KEYCODE_DPAD_RIGHT -> "next_slide"
+        KeyEvent.KEYCODE_DPAD_LEFT -> "prev_slide"
+        KeyEvent.KEYCODE_DPAD_UP -> "scroll_fastForward"
+        KeyEvent.KEYCODE_DPAD_DOWN -> "scroll_rewind"
+        in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 ->
+            "button_" + (keyCode - KeyEvent.KEYCODE_0)
+        else -> null
     }
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)

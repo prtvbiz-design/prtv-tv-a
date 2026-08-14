@@ -57,6 +57,9 @@ class StartActivity : Activity(), KeyRouter.Screen {
         prefs = Prefs(this)
         router = KeyRouter(this)
         EventLog.add("start", "device=${prefs.deviceId} build=${BuildConfig.VERSION_NAME}")
+        // touchMode=true объясняет отказ requestFocus на кнопках без
+        // focusableInTouchMode — одна строка вместо часа гаданий
+        EventLog.add("start", "touchMode=" + window.decorView.isInTouchMode)
 
         slideshow = findViewById(R.id.inputSlideshow)
         stream = findViewById(R.id.inputStream)
@@ -72,8 +75,7 @@ class StartActivity : Activity(), KeyRouter.Screen {
             android.os.Build.VERSION.RELEASE,
             BuildConfig.VERSION_NAME,
         )
-        findViewById<TextView>(R.id.instructions).text =
-            getString(R.string.instructions_fmt, prefs.host)
+        renderHostHint()
 
         wireHosts()
         wireLanguage()
@@ -138,15 +140,47 @@ class StartActivity : Activity(), KeyRouter.Screen {
         if (!forward && !backward) return false
 
         val currentId = currentFocus?.id ?: View.NO_ID
-        val targetId = if (forward) {
+        var targetId = if (forward) {
             FocusChain.next(currentId) { isChainEnabled(it) }
         } else {
             FocusChain.previous(currentId) { isChainEnabled(it) }
         }
-        if (targetId == currentId) return true
-        findViewById<View>(targetId)?.requestFocus()
+
+        // Фокус оказался вне цепочки — например, на контейнере без id.
+        // Раньше это молча ничего не делало: нажатие мы съедали, а фокус
+        // не двигали, и стрелка выглядела мёртвой. Заводим его внутрь.
+        if (targetId == View.NO_ID || !FocusChain.contains(targetId)) {
+            targetId = FocusChain.firstEnabled { isChainEnabled(it) } ?: return true
+        }
+
+        if (targetId == currentId) {
+            EventLog.add("focus", nameOf(currentId) + " край цепочки")
+            return true
+        }
+
+        val target = findViewById<View>(targetId)
+        if (target == null) {
+            EventLog.add("focus", "цель " + nameOf(targetId) + " не найдена")
+            return true
+        }
+        var ok = target.requestFocus()
+        if (!ok) {
+            // requestFocus отказывает, если окно в touch mode, а элемент
+            // не помечен focusableInTouchMode. На части приставок так и есть.
+            target.isFocusableInTouchMode = true
+            ok = target.requestFocusFromTouch() || target.requestFocus()
+        }
+        EventLog.add(
+            "focus",
+            nameOf(currentId) + " -> " + nameOf(targetId) + (if (ok) " ok" else " ОТКАЗ"),
+        )
         return true
     }
+
+    /** Имя элемента вместо голого числа: журнал читают с экрана телевизора. */
+    private fun nameOf(id: Int): String =
+        if (id == View.NO_ID) "-"
+        else runCatching { resources.getResourceEntryName(id) }.getOrDefault("id" + id)
 
     /**
      * Цветные кнопки переводят фокус на соответствующее поле — как в
@@ -195,12 +229,16 @@ class StartActivity : Activity(), KeyRouter.Screen {
             val on = isChainEnabled(id)
             view.isEnabled = on
             view.isFocusable = on
-            if (view is EditText) view.isFocusableInTouchMode = on
+            // Не только для полей: если окно окажется в touch mode, кнопка
+            // без этого флага откажет в requestFocus и стрелка не сработает.
+            view.isFocusableInTouchMode = on
         }
         val current = currentFocus
         if (current == null || !FocusChain.contains(current.id) || !isChainEnabled(current.id)) {
-            FocusChain.firstEnabled { isChainEnabled(it) }
-                ?.let { findViewById<View>(it)?.requestFocus() }
+            FocusChain.firstEnabled { isChainEnabled(it) }?.let { id ->
+                val ok = findViewById<View>(id)?.requestFocus() ?: false
+                EventLog.add("focus", "начальный " + nameOf(id) + (if (ok) " ok" else " ОТКАЗ"))
+            }
         }
     }
 
@@ -255,9 +293,19 @@ class StartActivity : Activity(), KeyRouter.Screen {
         lastLaunchAt = SystemClock.elapsedRealtime()
         prefs.setCode(kind, code)
         prefs.lastKind = kind
+
+        // Хост выводится из кода, как в боевом приложении
+        // (resolveBaseUrlForCode). Ручной выбор перекрывает автоопределение.
+        val host = Hosts.resolveForCode(code, prefs.host)
+        EventLog.add(
+            "host",
+            "код " + code.length + " знаков · настройка " + Hosts.label(prefs.host) +
+                " -> " + host + " " + Hosts.schemaName(host),
+        )
+
         startActivity(
             Intent(this, PlayerActivity::class.java)
-                .putExtra(PlayerActivity.EXTRA_HOST, prefs.host)
+                .putExtra(PlayerActivity.EXTRA_HOST, host)
                 .putExtra(PlayerActivity.EXTRA_KIND, kind.name)
                 .putExtra(PlayerActivity.EXTRA_CODE, code)
         )
@@ -268,12 +316,27 @@ class StartActivity : Activity(), KeyRouter.Screen {
     private fun wireHosts() {
         val apply = { host: String ->
             prefs.host = host
-            findViewById<TextView>(R.id.instructions).text =
-                getString(R.string.instructions_fmt, host)
-            Toast.makeText(this, "$host · ${Hosts.schemaName(host)}", Toast.LENGTH_SHORT).show()
+            renderHostHint()
+            val note = if (host == Hosts.AUTO) {
+                getString(R.string.host_auto) + " · по длине кода"
+            } else {
+                host + " · " + Hosts.schemaName(host)
+            }
+            Toast.makeText(this, note, Toast.LENGTH_SHORT).show()
         }
+        findViewById<Button>(R.id.btnHostAuto).setOnClickListener { apply(Hosts.AUTO) }
         findViewById<Button>(R.id.btnHostSu).setOnClickListener { apply(Hosts.SU) }
         findViewById<Button>(R.id.btnHostPro).setOnClickListener { apply(Hosts.PRO) }
+    }
+
+    private fun renderHostHint() {
+        val shown = if (prefs.host == Hosts.AUTO) {
+            getString(R.string.host_auto_hint)
+        } else {
+            prefs.host
+        }
+        findViewById<TextView>(R.id.instructions).text =
+            getString(R.string.instructions_fmt, shown)
     }
 
     private fun wireLanguage() {
@@ -338,7 +401,10 @@ class StartActivity : Activity(), KeyRouter.Screen {
     /** Пресеты из B3: пары «то же СШ, разный хост». Технический элемент. */
     private fun wirePresets() {
         val apply = { su: String, pro: String ->
-            slideshow.setText(if (Hosts.isLegacySchema(prefs.host)) su else pro)
+            // В режиме «Авто» подставляем семизначный код: он сам уедет на pro.
+            // Чтобы прогнать ту же пару на su, надо явно выбрать prtv.su —
+            // тогда подставится короткий номер.
+            slideshow.setText(if (prefs.host == Hosts.SU) su else pro)
             slideshow.requestFocus()
         }
         findViewById<Button>(R.id.presetCalendar).setOnClickListener { apply("11211", "0012276") }

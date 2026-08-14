@@ -36,7 +36,7 @@ class Prefs(ctx: Context) {
             return generated
         }
     var host: String
-        get() = sp.getString(K_HOST, Hosts.PRO) ?: Hosts.PRO
+        get() = sp.getString(K_HOST, Hosts.AUTO) ?: Hosts.AUTO
         set(v) = sp.edit().putString(K_HOST, v).apply()
     /** Последний введённый код каждого типа. */
     fun code(kind: Hosts.Kind): String = sp.getString(keyFor(kind), "") ?: ""

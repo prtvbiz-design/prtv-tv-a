@@ -61,8 +61,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
+                <Button android:id="@+id/btnHostAuto" style="@style/PanelButton"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:text="@string/host_auto"/>
                 <Button android:id="@+id/btnHostSu" style="@style/PanelButton"
                     android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_marginStart="6dp"
                     android:text="@string/host_su"/>
                 <Button android:id="@+id/btnHostPro" style="@style/PanelButton"
                     android:layout_width="0dp" android:layout_weight="1"
