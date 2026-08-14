@@ -15,7 +15,6 @@
     <string name="host">Хост</string>
     <string name="host_su">prtv.su</string>
     <string name="host_pro">prtv.pro</string>
-    <string name="host_test">new-test</string>
     <string name="input_slideshow">Слайд-шоу</string>
     <string name="input_stream">Запуск по расписанию</string>
     <string name="input_set">Меню слайд-шоу</string>

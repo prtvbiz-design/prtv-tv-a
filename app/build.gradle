@@ -2,19 +2,26 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
 }
+
 android {
     namespace 'pro.prtv.tva'
     compileSdk 34
+
     defaultConfig {
         applicationId "pro.prtv.tva"
         minSdk 21
         targetSdk 34
-        versionCode 1
-        versionName "A1.0"
+        // Единственный источник номера версии — gradle.properties.
+        // Держать его в двух местах уже стоило боевому приложению
+        // невозможности обновляться (A-OP-09).
+        versionCode project.property('prtvVersionCode').toInteger()
+        versionName project.property('prtvVersionName')
     }
+
     buildFeatures {
         buildConfig true
     }
+
     signingConfigs {
         // Ключ приходит из секретов Actions. Релиз debug-ключом не подписывается,
         // keystore в репозитории не хранится.
@@ -27,6 +34,7 @@ android {
             }
         }
     }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -35,6 +43,7 @@ android {
             }
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -43,6 +52,7 @@ android {
         jvmTarget = '17'
     }
 }
+
 dependencies {
-    // Зависимостей нет намеренно. Всё, что нужно Э1, есть в платформе.
+    // Зависимостей нет намеренно. Всё, что нужно, есть в платформе.
 }

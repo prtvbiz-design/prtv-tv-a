@@ -68,10 +68,6 @@
                     android:layout_width="0dp" android:layout_weight="1"
                     android:layout_marginStart="6dp"
                     android:text="@string/host_pro"/>
-                <Button android:id="@+id/btnHostTest" style="@style/PanelButton"
-                    android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:text="@string/host_test"/>
             </LinearLayout>
             <TextView style="@style/SectionTitle" android:text="@string/cache_title"/>
             <Button
